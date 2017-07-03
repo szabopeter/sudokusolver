@@ -3,16 +3,36 @@
 UNIT_X, UNIT_Y = 3, 3
 VALIDCHARS = "123456789"
 EMPTYCHAR = "."
-SIZE = len(VALIDCHARS)
-if UNIT_X*UNIT_Y != SIZE:
-    print "Invalid config!"
+SIZE = 0
+
+def is_config_valid():
+    SIZE = len(VALIDCHARS)
+    if UNIT_X*UNIT_Y != SIZE:
+        print "Invalid config!"
+        return False
+    return True
+
+if not is_config_valid():
+    import sys
+    sys.exit(1)
+
 
 class solver:
     def __init__(self, textinput, director = True):
         self.director = director
-        self.textinput = textinput
+        self.textinput = textinput.split("\n")
+        configline = self.textinput[0]
+        if 'x' in configline and ':' in configline:
+            self.textinput.pop(0)
+            sizes, chars = configline.split(':')
+            UNIT_X, UNIT_Y = [int(size) for size in sizes.split("x")]
+            VALIDCHARS = chars.strip()
+            EMPTYCHAR = VALIDCHARS.pop(0)
+            if not is_config_valid():
+                raise Exception("Invalid config")
+
         self.rows = []
-        for line in textinput.split("\n"):
+        for line in textinput:
             if line.strip().startswith("#"):
                 continue
 
