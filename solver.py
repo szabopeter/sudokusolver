@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-UNIT = 3
+UNIT_X, UNIT_Y = 3, 3
 VALIDCHARS = "123456789"
 EMPTYCHAR = "."
 SIZE = len(VALIDCHARS)
-if UNIT*UNIT != SIZE:
+if UNIT_X*UNIT_Y != SIZE:
     print "Invalid config!"
 
 class solver:
@@ -28,7 +28,7 @@ class solver:
 
     def __str__(self):
         def separatorNeeded(col, separator):
-            if (col-2) % UNIT == 0:
+            if (col-2) % UNIT_X == 0:
                 return separator
             else:
                 return ""
@@ -62,13 +62,23 @@ class solver:
         1 | 0   | 3
         2 | 0   | 6
         3 | 3   | 0
+        8 | 6   | 6
         ...
         i | 3 * (i / 3) | 3 * (i % 3)
+
+        i | row | col
+        0 | 0   | 0
+        1 | 0   | 4
+        2 | 2   | 0
+        3 | 2   | 4
+        7 | 6   | 4
+        ...
+        i | 2 * (i / 2) | 4 * (i % 2)
         """
-        row = UNIT * (i / UNIT)
-        col = UNIT * (i % UNIT)
+        row = UNIT_Y * (i / UNIT_Y)
+        col = UNIT_X * (i % UNIT_Y)
         import itertools
-        return [ self.rows[row+offset[0]][col+offset[1]] for offset in itertools.product(range(UNIT), range(UNIT))]
+        return [ self.rows[row+offset[0]][col+offset[1]] for offset in itertools.product(range(UNIT_X), range(UNIT_Y))]
 
     def hasDuplicate(self, cellist, contextdescription=""):
         usedvalues = []
