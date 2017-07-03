@@ -1,0 +1,24 @@
+
+
+# ------------------------------------------------------------------------------
+# STARTUP SCREENS
+# ------------------------------------------------------------------------------
+
+screen -t python bpython3
+screen -t main bash
+register c "vim solver.py"
+paste c
+screen -t exec bash
+register c "git log --pretty=oneline | tac\ngit status\n"
+paste c
+
+screen -t test bash
+register c "vim test_"
+paste c
+screen -t test2 bash
+register c "vim testutils.py"
+paste c
+next
+next
+next
+
