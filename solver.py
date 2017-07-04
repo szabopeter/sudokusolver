@@ -1,20 +1,29 @@
 #!/usr/bin/env python
 
-UNIT_X, UNIT_Y = 3, 3
-VALIDCHARS = "123456789"
-EMPTYCHAR = "."
-SIZE = 0
+class Config(object):
+    def __init__(self, configline=None):
+        if configline is None:
+            self.UNIT_X, self.UNIT_Y = 3, 3
+            self.VALIDCHARS = "123456789"
+            self.EMPTYCHAR = "."
+            self.SIZE = 0
+        else:
+            sizes, chars = [field.strip() for field in configline.split(':')]
+            self.UNIT_X, self.UNIT_Y = [int(size) for size in sizes.split("x")]
+            self.EMPTYCHAR, self.VALIDCHARS = chars[0], chars[1:]
 
-def is_config_valid():
-    SIZE = len(VALIDCHARS)
-    if UNIT_X*UNIT_Y != SIZE:
-        print "Invalid config!"
-        return False
-    return True
+    def is_valid(self):
+        self.SIZE = len(self.VALIDCHARS)
+        if self.UNIT_X*self.UNIT_Y != self.SIZE:
+            print "Invalid config!"
+            print(self)
+            return False
+        return True
 
-if not is_config_valid():
-    import sys
-    sys.exit(1)
+    def __str__(self):
+        configline = "%sx%s:%s%s" % (
+            self.UNIT_X, self.UNIT_Y, self.EMPTYCHAR, self.VALIDCHARS, )
+        return configline + " (size=%s)" % self.SIZE
 
 
 class solver:
@@ -22,41 +31,54 @@ class solver:
         self.director = director
         self.textinput = textinput.split("\n")
         configline = self.textinput[0]
+        config = Config()
         if 'x' in configline and ':' in configline:
+            config = Config(configline)
             self.textinput.pop(0)
-            sizes, chars = configline.split(':')
-            UNIT_X, UNIT_Y = [int(size) for size in sizes.split("x")]
-            VALIDCHARS = chars.strip()
-            EMPTYCHAR = VALIDCHARS.pop(0)
-            if not is_config_valid():
-                raise Exception("Invalid config")
+
+        if not config.is_valid():
+            raise Exception("Invalid config")
+
+        self.config = config
+        # print(self.config)
 
         self.rows = []
-        for line in textinput:
+        for line in self.textinput:
             if line.strip().startswith("#"):
                 continue
 
-            validchars = [ch for ch in line if ch in VALIDCHARS + EMPTYCHAR]
-            if len(validchars) == SIZE:
-                linedata = [ cell(validchars[col], "(%d %d)"%(len(self.rows), col,)) for col in range(SIZE) ]
+            validchars = [ch for ch in line if ch in self.config.VALIDCHARS + self.config.EMPTYCHAR]
+            if len(validchars) == self.config.SIZE:
+                def mkcelldescription(col):
+                    return "(%d %d)"%(len(self.rows), col,)
+
+                linedata = [cell(
+                    validchars[col],
+                    mkcelldescription(col),
+                    self.config.VALIDCHARS,
+                    self.config.EMPTYCHAR)
+                        for col in range(self.config.SIZE)]
+
                 self.rows.append(linedata)
             elif len(validchars) != 0:
                 print "Invalid row: " + line.strip()
-        #print str(self)
-        if (len(self.rows) != SIZE):
+        # print str(self)
+        if (len(self.rows) != self.config.SIZE):
             print "Invalid number of rows (%d)!"%(len(self.rows))
 
     def __str__(self):
         def separatorNeeded(col, separator):
-            if (col-2) % UNIT_X == 0:
+            if (col-2) % self.config.UNIT_X == 0:
                 return separator
             else:
                 return ""
 
         #return "\n".join(" ".join([str(cell) for cell in linedata ]) for linedata in self.rows)
+        SIZE = self.config.SIZE
         return "\n".join([" ".join(
             [str(self.rows[row][col]) + separatorNeeded(col, " | ") for col in range(SIZE)])
             + separatorNeeded(row, "\n" + ("-" * (SIZE+3) * (SIZE +1) ) ) for row in range(SIZE)])
+
     def dumpdata(self):
         print str(self)
 
@@ -95,6 +117,8 @@ class solver:
         ...
         i | 2 * (i / 2) | 4 * (i % 2)
         """
+
+        UNIT_X, UNIT_Y = self.config.UNIT_X, self.config.UNIT_Y
         row = UNIT_Y * (i / UNIT_Y)
         col = UNIT_X * (i % UNIT_Y)
         import itertools
@@ -102,7 +126,7 @@ class solver:
 
     def hasDuplicate(self, cellist, contextdescription=""):
         usedvalues = []
-        valuestocheck = [cell.value for cell in cellist if cell.value in VALIDCHARS]
+        valuestocheck = [cell.value for cell in cellist if cell.value in self.config.VALIDCHARS]
         #print "Checking %s in context %s"%(valuestocheck, contextdescription, )
         for cellvalue in valuestocheck:
             if cellvalue in usedvalues:
@@ -115,7 +139,7 @@ class solver:
     def elimination(self, cellist, context):
         success = False
         for pivotcell in cellist:
-            if pivotcell.value != EMPTYCHAR:
+            if pivotcell.value != self.config.EMPTYCHAR:
                 for cell in cellist:
                     if (cell != pivotcell and pivotcell.value in cell.possible):
                         cell.possible = cell.possible.replace(pivotcell.value, "")
@@ -139,7 +163,7 @@ class solver:
         return success
 
     def isValid(self):
-        for i in range(SIZE):
+        for i in range(self.config.SIZE):
             if self.hasDuplicate(self.byRule1(i), "by row %d"%i ) \
             or self.hasDuplicate(self.byRule2(i), "by col %d"%i ) \
             or self.hasDuplicate(self.byRule3(i), "by sqr %d"%i ) \
@@ -157,7 +181,7 @@ class solver:
             while keepgoing and itercount < 1000:
                 itercount += 1
                 keepgoing = False
-                for i in range(SIZE):
+                for i in range(self.config.SIZE):
                     keepgoing = keepgoing or self.elimination(self.byRule1(i), "by row %d"%i )
                     keepgoing = keepgoing or self.elimination(self.byRule2(i), "by col %d"%i )
                     keepgoing = keepgoing or self.elimination(self.byRule3(i), "by sqr %d"%i )
@@ -184,10 +208,11 @@ class solver:
         return solutionlist
 
     def allCellsFlat(self):
+        SIZE = self.config.SIZE
         return [ self.rows[i/SIZE][i%SIZE] for i in range(SIZE*SIZE) ]
 
     def unsolvedCells(self):
-        return [ cell for cell in self.allCellsFlat() if cell.value == EMPTYCHAR ]
+        return [ cell for cell in self.allCellsFlat() if cell.value == self.config.EMPTYCHAR ]
 
     def solved(self):
         return self.isValid() and len(self.unsolvedCells()) == 0
@@ -199,10 +224,12 @@ class solver:
     def clone(self):
         return solver(self.asText(), False)
 
+
 class cell:
-    def __init__(self, value, description, possible = VALIDCHARS):
+    def __init__(self, value, description, possible, EMPTYCHAR):
+        self.EMPTYCHAR = EMPTYCHAR
         self.description = description
-        if value == ".":
+        if value == EMPTYCHAR:
             self.possible = possible
             self.value = EMPTYCHAR
         else:
@@ -213,7 +240,7 @@ class cell:
         return str(self)
 
     def __str__(self):
-        if self.value == EMPTYCHAR:
+        if self.value == self.EMPTYCHAR:
             return "[%9s]"%self.possible
         else:
             return "    %3s    "%self.value
