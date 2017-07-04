@@ -70,7 +70,7 @@ class solver:
 
     def __str__(self):
         def separatorNeeded(col, unit, separator):
-            if col % unit == 0:
+            if (col+1) % unit == 0:
                 return separator
             else:
                 return ""
