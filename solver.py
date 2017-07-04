@@ -30,9 +30,11 @@ class solver:
     def __init__(self, textinput, director = True):
         self.director = director
         self.textinput = textinput.split("\n")
+        self.configline = "3x3:.123456789"
         configline = self.textinput[0]
         config = Config()
         if 'x' in configline and ':' in configline:
+            self.configline = configline
             config = Config(configline)
             self.textinput.pop(0)
 
@@ -67,17 +69,18 @@ class solver:
             print "Invalid number of rows (%d)!"%(len(self.rows))
 
     def __str__(self):
-        def separatorNeeded(col, separator):
-            if (col-2) % self.config.UNIT_X == 0:
+        def separatorNeeded(col, unit, separator):
+            if col % unit == 0:
                 return separator
             else:
                 return ""
 
         #return "\n".join(" ".join([str(cell) for cell in linedata ]) for linedata in self.rows)
         SIZE = self.config.SIZE
+        UNIT_X, UNIT_Y = self.config.UNIT_X, self.config.UNIT_Y
         return "\n".join([" ".join(
-            [str(self.rows[row][col]) + separatorNeeded(col, " | ") for col in range(SIZE)])
-            + separatorNeeded(row, "\n" + ("-" * (SIZE+3) * (SIZE +1) ) ) for row in range(SIZE)])
+            [str(self.rows[row][col]) + separatorNeeded(col, UNIT_X, " | ") for col in range(SIZE)])
+            + separatorNeeded(row, UNIT_Y, "\n" + ("-" * (SIZE+3) * (SIZE +1) ) ) for row in range(SIZE)])
 
     def dumpdata(self):
         print str(self)
@@ -122,7 +125,7 @@ class solver:
         row = UNIT_Y * (i / UNIT_Y)
         col = UNIT_X * (i % UNIT_Y)
         import itertools
-        return [ self.rows[row+offset[0]][col+offset[1]] for offset in itertools.product(range(UNIT_X), range(UNIT_Y))]
+        return [ self.rows[row+offset[0]][col+offset[1]] for offset in itertools.product(range(UNIT_Y), range(UNIT_X))]
 
     def hasDuplicate(self, cellist, contextdescription=""):
         usedvalues = []
@@ -204,11 +207,12 @@ class solver:
                     solutionlist.extend(aclone.solve(iterbase + itercount))
                 success = "%d solution(s)"%(len(solutionlist),)
 
-            #self.elimination(self.byRule3(8), "dbg")
+            # self.elimination(self.byRule3(8), "dbg")
         return solutionlist
 
     def allCellsFlat(self):
         SIZE = self.config.SIZE
+        # print("size=%s rows=%s rowlens=%s" % (SIZE, len(self.rows), ",".join([str(len(row)) for row in self.rows])))
         return [ self.rows[i/SIZE][i%SIZE] for i in range(SIZE*SIZE) ]
 
     def unsolvedCells(self):
@@ -218,7 +222,7 @@ class solver:
         return self.isValid() and len(self.unsolvedCells()) == 0
 
     def asText(self):
-        text = "\n".join(["".join([cell.value for cell in row]) for row in self.rows])
+        text = "\n".join([self.configline, ] + ["".join([cell.value for cell in row]) for row in self.rows])
         return text
 
     def clone(self):
