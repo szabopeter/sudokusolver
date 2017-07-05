@@ -58,7 +58,7 @@ class solver:
                     validchars[col],
                     mkcelldescription(col),
                     self.config.VALIDCHARS,
-                    self.config.EMPTYCHAR)
+                    self.config)
                         for col in range(self.config.SIZE)]
 
                 self.rows.append(linedata)
@@ -78,9 +78,11 @@ class solver:
         #return "\n".join(" ".join([str(cell) for cell in linedata ]) for linedata in self.rows)
         SIZE = self.config.SIZE
         UNIT_X, UNIT_Y = self.config.UNIT_X, self.config.UNIT_Y
+        colsep = " | "
+        rowsep = "\n" + ( "-" * ((SIZE+len("[ ]"))*(SIZE-1) + UNIT_Y*len(colsep) ))
         return "\n".join([" ".join(
-            [str(self.rows[row][col]) + separatorNeeded(col, UNIT_X, " | ") for col in range(SIZE)])
-            + separatorNeeded(row, UNIT_Y, "\n" + ("-" * (SIZE+3) * (SIZE +1) ) ) for row in range(SIZE)])
+            [str(self.rows[row][col]) + separatorNeeded(col, UNIT_X, colsep) for col in range(SIZE)])
+            + separatorNeeded(row, UNIT_Y, rowsep) for row in range(SIZE)])
 
     def dumpdata(self):
         print str(self)
@@ -234,28 +236,32 @@ class solver:
 
 
 class cell:
-    def __init__(self, value, description, possible, EMPTYCHAR):
-        self.EMPTYCHAR = EMPTYCHAR
+    def __init__(self, value, description, possible, config):
+        self.EMPTYCHAR = config.EMPTYCHAR
+        self.SIZE = config.SIZE
         self.description = description
-        if value == EMPTYCHAR:
+        if value == self.EMPTYCHAR:
             self.possible = possible
-            self.value = EMPTYCHAR
+            self.value = self.EMPTYCHAR
         else:
             self.possible = value
             self.value = value
+
+        self.fmt_possibles = "[%%%s]" % self.SIZE
+        self.fmt_filled = "%s".center(self.SIZE+2)
 
     def __repr__(self):
         return str(self)
 
     def __str__(self):
+        # result length should always be SIZE+2
         if self.value == self.EMPTYCHAR:
-            return "[%9s]"%self.possible
+            return self.fmt_possibles%self.possible
         else:
-            return "    %3s    "%self.value
+            return self.fmt_filled%self.value
 
     def clone(self):
-        return cell(self.value, self.description, self.possible)
-        
+        return cell(self.value, self.description, self.possible, self.config)
 
             
 if __name__=='__main__':
