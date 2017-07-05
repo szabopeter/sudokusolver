@@ -191,7 +191,7 @@ class solver:
                 #print "After %d iteration(s): "%itercount
                 #self.dumpdata()
             success = "?"
-            if keepgoing: success ="Failure"
+            if keepgoing: success = "Failure"
             elif not self.isValid(): success = "Invalid"
             elif self.solved():
                 success = "Success"
@@ -200,12 +200,16 @@ class solver:
             else:
                 aclone = self.clone()
                 badcell = self.unsolvedCells()[0]
-                badcellclone = [ cell for cell in aclone.allCellsFlat() if badcell.description == cell.description ][0]
+                badcellclone = [cell for cell in aclone.allCellsFlat() if badcell.description == cell.description][0]
                 for trial in badcell.possible:
                     badcellclone.value = trial
                     badcellclone.possible = trial
-                    solutionlist.extend(aclone.solve(iterbase + itercount))
-                success = "%d solution(s)"%(len(solutionlist),)
+                    subsolutions = aclone.solve(iterbase + itercount)
+                    if subsolutions:
+                        print("Had to backtrack at this state:")
+                        print(self.asText())
+                    solutionlist.extend(subsolutions)
+                success = "%d solution(s)" % (len(solutionlist), )
 
             # self.elimination(self.byRule3(8), "dbg")
         return solutionlist
