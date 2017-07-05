@@ -190,14 +190,14 @@ class solver:
                     keepgoing = keepgoing or self.elimination(self.byRule1(i), "by row %d"%i )
                     keepgoing = keepgoing or self.elimination(self.byRule2(i), "by col %d"%i )
                     keepgoing = keepgoing or self.elimination(self.byRule3(i), "by sqr %d"%i )
-                #print "After %d iteration(s): "%itercount
-                #self.dumpdata()
+                # print("\nAfter %d+%d iteration(s): " % (iterbase, itercount, ))
+                # self.dumpdata()
             success = "?"
             if keepgoing: success = "Failure"
             elif not self.isValid(): success = "Invalid"
             elif self.solved():
                 success = "Success"
-                solutionlist = [self,]
+                solutionlist = [self.clone(), ]
                 print "Success after %d iterations"%(iterbase + itercount,)
             else:
                 aclone = self.clone()
@@ -247,7 +247,7 @@ class cell:
             self.possible = value
             self.value = value
 
-        self.fmt_possibles = "[%%%s]" % self.SIZE
+        self.fmt_possibles = "[%%%ss]" % self.SIZE
         self.fmt_filled = "%s".center(self.SIZE+2)
 
     def __repr__(self):
@@ -275,7 +275,7 @@ if __name__=='__main__':
         #s.dumpdata()
         #print repr(s.byRule3(8))
         solutions = s.solve()
-        print "Found %d solutions"%(len(solutions),)
+        print "Found %d solution%s"%(len(solutions), "s" if len(solutions)>1 else "")
         for i in range(len(solutions)):
             print "Solution #%d"%(i+1)
             solutions[i].dumpdata()
