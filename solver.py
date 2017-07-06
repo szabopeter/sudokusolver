@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+
 class Config(object):
     def __init__(self, configline=None):
         if configline is None:
@@ -183,7 +184,7 @@ class solver:
             if self.director: print "Seems legit..."
             keepgoing = True
             itercount = 0
-            while keepgoing and itercount < 1000:
+            while keepgoing:
                 itercount += 1
                 keepgoing = False
                 for i in range(self.config.SIZE):
@@ -192,6 +193,7 @@ class solver:
                     keepgoing = keepgoing or self.elimination(self.byRule3(i), "by sqr %d"%i )
                 # print("\nAfter %d+%d iteration(s): " % (iterbase, itercount, ))
                 # self.dumpdata()
+
             success = "?"
             if keepgoing: success = "Failure"
             elif not self.isValid(): success = "Invalid"
@@ -201,8 +203,12 @@ class solver:
                 print "Success after %d iterations"%(iterbase + itercount,)
             else:
                 aclone = self.clone()
-                badcell = self.unsolvedCells()[0]
+                badcell = self.unsolvedCellsToBacktrack()[0]
                 badcellclone = [cell for cell in aclone.allCellsFlat() if badcell.description == cell.description][0]
+                if len(badcell.possible) > 3:
+                    print(self)
+                    print("Backtracking at %s with too many possible values: %s" %
+                        (badcell.description, badcell.possible, ))
                 for trial in badcell.possible:
                     badcellclone.value = trial
                     badcellclone.possible = trial
@@ -223,6 +229,11 @@ class solver:
 
     def unsolvedCells(self):
         return [ cell for cell in self.allCellsFlat() if cell.value == self.config.EMPTYCHAR ]
+
+    def unsolvedCellsToBacktrack(self):
+        unsolved = self.unsolvedCells()
+        unsolved.sort(key=lambda cell: len(cell.possible))
+        return unsolved
 
     def solved(self):
         return self.isValid() and len(self.unsolvedCells()) == 0
