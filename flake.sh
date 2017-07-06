@@ -1,1 +1,1 @@
-flake8 main.py test_*.py
+flake8 solver.py test_*.py

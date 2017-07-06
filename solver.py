@@ -53,7 +53,7 @@ class Solver:
             validchars = [ch for ch in line if ch in self.config.VALIDCHARS + self.config.EMPTYCHAR]
             if len(validchars) == self.config.SIZE:
                 def mkcelldescription(col):
-                    return "(%d %d)"%(len(self.rows), col,)
+                    return "(%d %d)" % (len(self.rows), col,)
 
                 linedata = [cell(
                     validchars[col],
@@ -67,7 +67,7 @@ class Solver:
                 print("Invalid row: " + line.strip())
         # print(str(self))
         if (len(self.rows) != self.config.SIZE):
-            print("Invalid number of rows (%d)!"%(len(self.rows)))
+            print("Invalid number of rows (%d)!" % (len(self.rows)))
 
     def __str__(self):
         def separatorNeeded(col, unit, separator):
@@ -76,11 +76,11 @@ class Solver:
             else:
                 return ""
 
-        #return "\n".join(" ".join([str(cell) for cell in linedata ]) for linedata in self.rows)
+        #return "\n".join(" ".join([str(cell) for cell in linedata]) for linedata in self.rows)
         SIZE = self.config.SIZE
         UNIT_X, UNIT_Y = self.config.UNIT_X, self.config.UNIT_Y
         colsep = " | "
-        rowsep = "\n" + ( "-" * ((SIZE+len("[ ]"))*(SIZE-1) + UNIT_Y*len(colsep) ))
+        rowsep = "\n" + ( "-" * ((SIZE+len("[]"))*(SIZE-1) + UNIT_Y*len(colsep) ))
         return "\n".join([" ".join(
             [str(self.rows[row][col]) + separatorNeeded(col, UNIT_X, colsep) for col in range(SIZE)])
             + separatorNeeded(row, UNIT_Y, rowsep) for row in range(SIZE)])
@@ -97,11 +97,11 @@ class Solver:
 
     def byRule1(self, i):
         "Row i"
-        if i >= len(self.rows): print("Trying to get row %d while there are only %d of them"%( i, len(self.rows), ))
-        return [ cell for cell in self.rows[i]]
+        if i >= len(self.rows): print("Trying to get row %d while there are only %d of them" % ( i, len(self.rows), ))
+        return [cell for cell in self.rows[i]]
     def byRule2(self, i):
         "Col i"
-        return [ row[i] for row in self.rows ]
+        return [row[i] for row in self.rows]
     def byRule3(self, i):
         "Square i"
         """
@@ -128,15 +128,15 @@ class Solver:
         row = UNIT_Y * (i // UNIT_Y)
         col = UNIT_X * (i % UNIT_Y)
         import itertools
-        return [ self.rows[row+offset[0]][col+offset[1]] for offset in itertools.product(range(UNIT_Y), range(UNIT_X))]
+        return [self.rows[row+offset[0]][col+offset[1]] for offset in itertools.product(range(UNIT_Y), range(UNIT_X))]
 
     def hasDuplicate(self, cellist, contextdescription=""):
         usedvalues = []
         valuestocheck = [cell.value for cell in cellist if cell.value in self.config.VALIDCHARS]
-        # print("Checking %s in context %s"%(valuestocheck, contextdescription, ))
+        # print("Checking %s in context %s" % (valuestocheck, contextdescription, ))
         for cellvalue in valuestocheck:
             if cellvalue in usedvalues:
-                if (self.director): print("Context: %s\nValues: %s\nUsed already: %s"%(contextdescription, valuestocheck, usedvalues,))
+                if (self.director): print("Context: %s\nValues: %s\nUsed already: %s" % (contextdescription, valuestocheck, usedvalues,))
                 return True
             else:
                 usedvalues.append(cellvalue)
@@ -157,22 +157,22 @@ class Solver:
             else:
                 pivotpossibilities = set(pivotcell.possible)
                 if (context == "dbg"):
-                    print("%s: %s"%(pivotcell, pivotpossibilities,))
+                    print("%s: %s" % (pivotcell, pivotpossibilities,))
                 for cell in cellist:
                     if (cell != pivotcell):
                         pivotpossibilities -= set(cell.possible)
                 if (len(pivotpossibilities)==1):
                     pivotcell.value = list(pivotpossibilities)[0]
                     pivotcell.possible = pivotcell.value
-                    # print("Cell %s had no rival for value %s"%(pivotcell.description, pivotcell.value, ))
+                    # print("Cell %s had no rival for value %s" % (pivotcell.description, pivotcell.value, ))
                     success = True
         return success
 
     def isValid(self):
         for i in range(self.config.SIZE):
-            if self.hasDuplicate(self.byRule1(i), "by row %d"%i ) \
-            or self.hasDuplicate(self.byRule2(i), "by col %d"%i ) \
-            or self.hasDuplicate(self.byRule3(i), "by sqr %d"%i ) \
+            if self.hasDuplicate(self.byRule1(i), "by row %d" % i ) \
+            or self.hasDuplicate(self.byRule2(i), "by col %d" % i ) \
+            or self.hasDuplicate(self.byRule3(i), "by sqr %d" % i ) \
                 : return False
         return True
 
@@ -199,16 +199,17 @@ class Solver:
             elif not self.isValid(): success = "Invalid"
             elif self.solved():
                 success = "Success"
-                solutionlist = [self.clone(), ]
-                print("Success after %d iterations"%(iterbase + itercount,))
+                solutionlist = [self.clone(),]
+                print("Success after %d iterations" % (iterbase + itercount,))
             else:
                 aclone = self.clone()
                 badcell = self.unsolvedCellsToBacktrack()[0]
-                badcellclone = [cell for cell in aclone.allCellsFlat() if badcell.description == cell.description][0]
+                badcellclone = [cell for cell in aclone.allCellsFlat()
+                                if badcell.description == cell.description][0]
                 if len(badcell.possible) > 3:
                     print(self)
                     print("Backtracking at %s with too many possible values: %s" %
-                        (badcell.description, badcell.possible, ))
+                          (badcell.description, badcell.possible, ))
                 for trial in badcell.possible:
                     badcellclone.value = trial
                     badcellclone.possible = trial
@@ -217,18 +218,18 @@ class Solver:
                         print("Had to backtrack at this state:")
                         print(self.asText())
                     solutionlist.extend(subsolutions)
-                success = "%d solution(s)" % (len(solutionlist), )
 
             # self.elimination(self.byRule3(8), "dbg")
         return solutionlist
 
     def allCellsFlat(self):
         SIZE = self.config.SIZE
-        # print("size=%s rows=%s rowlens=%s" % (SIZE, len(self.rows), ",".join([str(len(row)) for row in self.rows])))
-        return [ self.rows[i//SIZE][i%SIZE] for i in range(SIZE*SIZE) ]
+        rowlens = ",".join([str(len(row)) for row in self.rows])
+        print("size=%s rows=%s rowlens=%s" % (SIZE, len(self.rows), rowlens))
+        return [self.rows[i // SIZE][i % SIZE] for i in range(SIZE*SIZE)]
 
     def unsolvedCells(self):
-        return [ cell for cell in self.allCellsFlat() if cell.value == self.config.EMPTYCHAR ]
+        return [cell for cell in self.allCellsFlat() if cell.value == self.config.EMPTYCHAR]
 
     def unsolvedCellsToBacktrack(self):
         unsolved = self.unsolvedCells()
@@ -239,7 +240,9 @@ class Solver:
         return self.isValid() and len(self.unsolvedCells()) == 0
 
     def asText(self):
-        text = "\n".join([self.configline, ] + ["".join([cell.value for cell in row]) for row in self.rows])
+        configline = [self.configline, ]
+        boardlines = ["".join([cell.value for cell in row]) for row in self.rows]
+        text = "\n".join(configline + boardlines)
         return text
 
     def clone(self):
@@ -267,26 +270,26 @@ class cell:
     def __str__(self):
         # result length should always be SIZE+2
         if self.value == self.EMPTYCHAR:
-            return self.fmt_possibles%self.possible
+            return self.fmt_possibles % self.possible
         else:
-            return self.fmt_filled%self.value
+            return self.fmt_filled % self.value
 
     def clone(self):
         return cell(self.value, self.description, self.possible, self.config)
 
-            
-if __name__=='__main__':
+
+if __name__ == '__main__':
     import sys
-    if len(sys.argv)<2:
+    if len(sys.argv) < 2:
         print("Usage: solver.py datafile.txt")
     else:
         f = open(sys.argv[1])
         data = f.read()
         s = Solver(data)
-        #s.dumpdata()
-        # print(repr(s.byRule3(8)))
+        # s.dumpdata()
+        #  print(repr(s.byRule3(8)))
         solutions = s.solve()
-        print("Found %d solution%s"%(len(solutions), "s" if len(solutions)>1 else ""))
+        print("Found %d solution%s" % (len(solutions), "s" if len(solutions) > 1 else ""))
         for i in range(len(solutions)):
-            print("Solution #%d"%(i+1))
+            print("Solution #%d" % (i+1))
             solutions[i].dumpdata()
