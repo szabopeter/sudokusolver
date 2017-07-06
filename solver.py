@@ -27,7 +27,7 @@ class Config(object):
         return configline + " (size=%s)" % self.SIZE
 
 
-class solver:
+class Solver:
     def __init__(self, textinput, director = True):
         self.director = director
         self.textinput = textinput.split("\n")
@@ -243,7 +243,7 @@ class solver:
         return text
 
     def clone(self):
-        return solver(self.asText(), False)
+        return Solver(self.asText(), False)
 
 
 class cell:
@@ -282,7 +282,7 @@ if __name__=='__main__':
     else:
         f = open(sys.argv[1])
         data = f.read()
-        s = solver(data)
+        s = Solver(data)
         #s.dumpdata()
         # print(repr(s.byRule3(8)))
         solutions = s.solve()
