@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 
 class Config(object):
@@ -16,7 +16,7 @@ class Config(object):
     def is_valid(self):
         self.SIZE = len(self.VALIDCHARS)
         if self.UNIT_X*self.UNIT_Y != self.SIZE:
-            print "Invalid config!"
+            print("Invalid config!")
             print(self)
             return False
         return True
@@ -64,10 +64,10 @@ class solver:
 
                 self.rows.append(linedata)
             elif len(validchars) != 0:
-                print "Invalid row: " + line.strip()
-        # print str(self)
+                print("Invalid row: " + line.strip())
+        # print(str(self))
         if (len(self.rows) != self.config.SIZE):
-            print "Invalid number of rows (%d)!"%(len(self.rows))
+            print("Invalid number of rows (%d)!"%(len(self.rows)))
 
     def __str__(self):
         def separatorNeeded(col, unit, separator):
@@ -86,7 +86,7 @@ class solver:
             + separatorNeeded(row, UNIT_Y, rowsep) for row in range(SIZE)])
 
     def dumpdata(self):
-        print str(self)
+        print(str(self))
 
     def __getitem__(self, row, col):
         return self.rows[row][col].value
@@ -97,7 +97,7 @@ class solver:
 
     def byRule1(self, i):
         "Row i"
-        if i >= len(self.rows): print "Trying to get row %d while there are only %d of them"%( i, len(self.rows), )
+        if i >= len(self.rows): print("Trying to get row %d while there are only %d of them"%( i, len(self.rows), ))
         return [ cell for cell in self.rows[i]]
     def byRule2(self, i):
         "Col i"
@@ -125,7 +125,7 @@ class solver:
         """
 
         UNIT_X, UNIT_Y = self.config.UNIT_X, self.config.UNIT_Y
-        row = UNIT_Y * (i / UNIT_Y)
+        row = UNIT_Y * (i // UNIT_Y)
         col = UNIT_X * (i % UNIT_Y)
         import itertools
         return [ self.rows[row+offset[0]][col+offset[1]] for offset in itertools.product(range(UNIT_Y), range(UNIT_X))]
@@ -133,10 +133,10 @@ class solver:
     def hasDuplicate(self, cellist, contextdescription=""):
         usedvalues = []
         valuestocheck = [cell.value for cell in cellist if cell.value in self.config.VALIDCHARS]
-        #print "Checking %s in context %s"%(valuestocheck, contextdescription, )
+        # print("Checking %s in context %s"%(valuestocheck, contextdescription, ))
         for cellvalue in valuestocheck:
             if cellvalue in usedvalues:
-                if (self.director): print "Context: %s\nValues: %s\nUsed already: %s"%(contextdescription, valuestocheck, usedvalues,)
+                if (self.director): print("Context: %s\nValues: %s\nUsed already: %s"%(contextdescription, valuestocheck, usedvalues,))
                 return True
             else:
                 usedvalues.append(cellvalue)
@@ -151,20 +151,20 @@ class solver:
                         cell.possible = cell.possible.replace(pivotcell.value, "")
                         success = True
                         if len(cell.possible) == 0 and self.director:
-                            print "Contradiction on cell "+ cell.description
+                            print("Contradiction on cell "+ cell.description)
                         if len(cell.possible) == 1:
                             cell.value = cell.possible
             else:
                 pivotpossibilities = set(pivotcell.possible)
                 if (context == "dbg"):
-                    print "%s: %s"%(pivotcell, pivotpossibilities,)
+                    print("%s: %s"%(pivotcell, pivotpossibilities,))
                 for cell in cellist:
                     if (cell != pivotcell):
                         pivotpossibilities -= set(cell.possible)
                 if (len(pivotpossibilities)==1):
                     pivotcell.value = list(pivotpossibilities)[0]
                     pivotcell.possible = pivotcell.value
-                    #print "Cell %s had no rival for value %s"%(pivotcell.description, pivotcell.value, )
+                    # print("Cell %s had no rival for value %s"%(pivotcell.description, pivotcell.value, ))
                     success = True
         return success
 
@@ -179,9 +179,9 @@ class solver:
     def solve(self, iterbase = 0):
         solutionlist = []
         if not self.isValid() and self.director:
-            print "Invalid starting state!"
+            print("Invalid starting state!")
         else:
-            if self.director: print "Seems legit..."
+            if self.director: print("Seems legit...")
             keepgoing = True
             itercount = 0
             while keepgoing:
@@ -200,7 +200,7 @@ class solver:
             elif self.solved():
                 success = "Success"
                 solutionlist = [self.clone(), ]
-                print "Success after %d iterations"%(iterbase + itercount,)
+                print("Success after %d iterations"%(iterbase + itercount,))
             else:
                 aclone = self.clone()
                 badcell = self.unsolvedCellsToBacktrack()[0]
@@ -225,7 +225,7 @@ class solver:
     def allCellsFlat(self):
         SIZE = self.config.SIZE
         # print("size=%s rows=%s rowlens=%s" % (SIZE, len(self.rows), ",".join([str(len(row)) for row in self.rows])))
-        return [ self.rows[i/SIZE][i%SIZE] for i in range(SIZE*SIZE) ]
+        return [ self.rows[i//SIZE][i%SIZE] for i in range(SIZE*SIZE) ]
 
     def unsolvedCells(self):
         return [ cell for cell in self.allCellsFlat() if cell.value == self.config.EMPTYCHAR ]
@@ -278,15 +278,15 @@ class cell:
 if __name__=='__main__':
     import sys
     if len(sys.argv)<2:
-        print "Usage: solver.py datafile.txt"
+        print("Usage: solver.py datafile.txt")
     else:
         f = open(sys.argv[1])
         data = f.read()
         s = solver(data)
         #s.dumpdata()
-        #print repr(s.byRule3(8))
+        # print(repr(s.byRule3(8)))
         solutions = s.solve()
-        print "Found %d solution%s"%(len(solutions), "s" if len(solutions)>1 else "")
+        print("Found %d solution%s"%(len(solutions), "s" if len(solutions)>1 else ""))
         for i in range(len(solutions)):
-            print "Solution #%d"%(i+1)
+            print("Solution #%d"%(i+1))
             solutions[i].dumpdata()
