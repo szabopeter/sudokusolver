@@ -46,6 +46,12 @@ class Solver:
         # print(self.config)
 
         self.rows = []
+        self.fill_rows()
+        # print(str(self))
+        if (len(self.rows) != self.config.SIZE):
+            print("Invalid number of rows (%d)!" % (len(self.rows)))
+
+    def fill_rows(self):
         for line in self.textinput:
             if line.strip().startswith("#"):
                 continue
@@ -66,9 +72,6 @@ class Solver:
                 self.rows.append(linedata)
             elif len(validchars) != 0:
                 print("Invalid row: " + line.strip())
-        # print(str(self))
-        if (len(self.rows) != self.config.SIZE):
-            print("Invalid number of rows (%d)!" % (len(self.rows)))
 
     def __str__(self):
         def separatorNeeded(col, unit, separator):
@@ -159,27 +162,39 @@ class Solver:
         success = False
         for pivotcell in cellist:
             if pivotcell.value != self.config.EMPTYCHAR:
-                for cell in cellist:
-                    if (cell != pivotcell and pivotcell.value in cell.possible):
-                        cell.possible = cell.possible.replace(pivotcell.value, "")
-                        success = True
-                        if len(cell.possible) == 0 and self.director:
-                            print("Contradiction on cell " + cell.description)
-                        if len(cell.possible) == 1:
-                            cell.value = cell.possible
-            else:
-                pivotpossibilities = set(pivotcell.possible)
-                if (context == "dbg"):
-                    print("%s: %s" % (pivotcell, pivotpossibilities,))
-                for cell in cellist:
-                    if (cell != pivotcell):
-                        pivotpossibilities -= set(cell.possible)
-                if (len(pivotpossibilities) == 1):
-                    pivotcell.value = list(pivotpossibilities)[0]
-                    pivotcell.possible = pivotcell.value
-                    # print("Cell %s had no rival for value %s" %
-                    #     (pivotcell.description, pivotcell.value, ))
+                if self.eliminate_on_filled(pivotcell, cellist):
                     success = True
+            else:
+                if self.eliminate_pivot(pivotcell, cellist, context):
+                    success = True
+        return success
+
+    def eliminate_on_filled(self, pivotcell, cellist):
+        success = False
+        for cell in cellist:
+            if (cell != pivotcell and pivotcell.value in cell.possible):
+                cell.possible = cell.possible.replace(pivotcell.value, "")
+                success = True
+                if len(cell.possible) == 0 and self.director:
+                    print("Contradiction on cell " + cell.description)
+                if len(cell.possible) == 1:
+                    cell.value = cell.possible
+        return success
+
+    def eliminate_pivot(self, pivotcell, cellist, context):
+        success = False
+        pivotpossibilities = set(pivotcell.possible)
+        if (context == "dbg"):
+            print("%s: %s" % (pivotcell, pivotpossibilities,))
+        for cell in cellist:
+            if (cell != pivotcell):
+                pivotpossibilities -= set(cell.possible)
+        if (len(pivotpossibilities) == 1):
+            pivotcell.value = list(pivotpossibilities)[0]
+            pivotcell.possible = pivotcell.value
+            # print("Cell %s had no rival for value %s" %
+            #     (pivotcell.description, pivotcell.value, ))
+            success = True
         return success
 
     def isValid(self):
@@ -195,6 +210,18 @@ class Solver:
                     return False
         return True
 
+    def eliminate(self):
+        itercount = 0
+        keepgoing = True
+        while keepgoing:
+            itercount += 1
+            keepgoing = False
+            for i in range(self.config.SIZE):
+                keepgoing = keepgoing or self.elimination(self.byRule1(i), "by row %d" % i)
+                keepgoing = keepgoing or self.elimination(self.byRule2(i), "by col %d" % i)
+                keepgoing = keepgoing or self.elimination(self.byRule3(i), "by sqr %d" % i)
+        return itercount
+
     def solve(self, iterbase=0):
         solutionlist = []
         if not self.isValid() and self.director:
@@ -202,51 +229,47 @@ class Solver:
         else:
             if self.director:
                 print("Seems legit...")
-            keepgoing = True
-            itercount = 0
-            while keepgoing:
-                itercount += 1
-                keepgoing = False
-                for i in range(self.config.SIZE):
-                    keepgoing = keepgoing or self.elimination(self.byRule1(i), "by row %d" % i)
-                    keepgoing = keepgoing or self.elimination(self.byRule2(i), "by col %d" % i)
-                    keepgoing = keepgoing or self.elimination(self.byRule3(i), "by sqr %d" % i)
-                # print("\nAfter %d+%d iteration(s): " % (iterbase, itercount, ))
-                # self.dumpdata()
+            itercount = self.eliminate()
 
-            if keepgoing:
-                pass
-            elif not self.isValid():
-                pass
-            elif self.solved():
-                solutionlist = [self.clone(), ]
-                print("Success after %d iterations" % (iterbase + itercount,))
-            else:
-                badcell = self.unsolvedCellsToBacktrack()[0]
-                if len(badcell.possible) > 3:
-                    print(self)
-                    print("Backtracking at %s with too many possible values: %s" %
-                          (badcell.description, badcell.possible, ))
+            # print("\nAfter %d+%d iteration(s): " % (iterbase, itercount, ))
+            # self.dumpdata()
 
-                for trial in badcell.possible:
-                    aclone = self.clone()
-                    badcellclone = [cell for cell in aclone.allCellsFlat()
-                                    if badcell.description == cell.description][0]
-                    badcellclone.value = trial
-                    badcellclone.possible = trial
-
-                    try:
-                        subsolutions = aclone.solve(iterbase + itercount)
-                    except KeyboardInterrupt:
-                        return solutionlist
-
-                    if subsolutions:
-                        print("Had to backtrack at this state:")
-                        print(self.asText())
-
+            if self.isValid():
+                if self.solved():
+                    solutionlist = [self.clone(), ]
+                    print("Success after %d iterations" % (iterbase + itercount,))
+                else:
+                    subsolutions = self.trackback(iterbase, itercount)
                     solutionlist.extend(subsolutions)
 
             # self.elimination(self.byRule3(8), "dbg")
+        return solutionlist
+
+    def trackback(self, iterbase, itercount):
+        solutionlist = []
+        badcell = self.unsolvedCellsToBacktrack()[0]
+        if len(badcell.possible) > 3:
+            print(self)
+            print("Backtracking at %s with too many possible values: %s" %
+                  (badcell.description, badcell.possible, ))
+
+        for trial in badcell.possible:
+            aclone = self.clone()
+            badcellclone = [cell for cell in aclone.allCellsFlat()
+                            if badcell.description == cell.description][0]
+            badcellclone.value = trial
+            badcellclone.possible = trial
+
+            try:
+                subsolutions = aclone.solve(iterbase + itercount)
+            except KeyboardInterrupt:
+                return solutionlist
+
+            if subsolutions:
+                print("Had to backtrack at this state:")
+                print(self.asText())
+
+            solutionlist.extend(subsolutions)
         return solutionlist
 
     def allCellsFlat(self):
@@ -273,7 +296,7 @@ class Solver:
         return text
 
     def clone(self):
-        return Solver(self.asText(), False)
+        return Solver(self.asText(), director=False)
 
 
 class cell:
@@ -312,7 +335,7 @@ if __name__ == '__main__':
     else:
         f = open(sys.argv[1])
         data = f.read()
-        s = Solver(data)
+        s = Solver(data, director=True)
         # s.dumpdata()
         #  print(repr(s.byRule3(8)))
         solutions = s.solve()
