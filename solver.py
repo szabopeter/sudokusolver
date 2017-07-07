@@ -222,21 +222,28 @@ class Solver:
                 solutionlist = [self.clone(), ]
                 print("Success after %d iterations" % (iterbase + itercount,))
             else:
-                aclone = self.clone()
                 badcell = self.unsolvedCellsToBacktrack()[0]
-                badcellclone = [cell for cell in aclone.allCellsFlat()
-                                if badcell.description == cell.description][0]
                 if len(badcell.possible) > 3:
                     print(self)
                     print("Backtracking at %s with too many possible values: %s" %
                           (badcell.description, badcell.possible, ))
+
                 for trial in badcell.possible:
+                    aclone = self.clone()
+                    badcellclone = [cell for cell in aclone.allCellsFlat()
+                                    if badcell.description == cell.description][0]
                     badcellclone.value = trial
                     badcellclone.possible = trial
-                    subsolutions = aclone.solve(iterbase + itercount)
+
+                    try:
+                        subsolutions = aclone.solve(iterbase + itercount)
+                    except KeyboardInterrupt:
+                        return solutionlist
+
                     if subsolutions:
                         print("Had to backtrack at this state:")
                         print(self.asText())
+
                     solutionlist.extend(subsolutions)
 
             # self.elimination(self.byRule3(8), "dbg")
