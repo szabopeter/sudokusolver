@@ -244,8 +244,8 @@ class Solver:
 
     def allCellsFlat(self):
         SIZE = self.config.SIZE
-        rowlens = ",".join([str(len(row)) for row in self.rows])
-        print("size=%s rows=%s rowlens=%s" % (SIZE, len(self.rows), rowlens))
+        # rowlens = ",".join([str(len(row)) for row in self.rows])
+        # print("size=%s rows=%s rowlens=%s" % (SIZE, len(self.rows), rowlens))
         return [self.rows[i // SIZE][i % SIZE] for i in range(SIZE*SIZE)]
 
     def unsolvedCells(self):
@@ -313,3 +313,4 @@ if __name__ == '__main__':
         for i in range(len(solutions)):
             print("Solution #%d" % (i+1))
             solutions[i].dumpdata()
+            # print(solutions[i].asText())
