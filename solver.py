@@ -28,7 +28,7 @@ class Config(object):
 
 
 class Solver:
-    def __init__(self, textinput, director = True):
+    def __init__(self, textinput, director=True):
         self.director = director
         self.textinput = textinput.split("\n")
         self.configline = "3x3:.123456789"
@@ -50,7 +50,8 @@ class Solver:
             if line.strip().startswith("#"):
                 continue
 
-            validchars = [ch for ch in line if ch in self.config.VALIDCHARS + self.config.EMPTYCHAR]
+            processables = self.config.VALIDCHARS + self.config.EMPTYCHAR
+            validchars = [ch for ch in line if ch in processables]
             if len(validchars) == self.config.SIZE:
                 def mkcelldescription(col):
                     return "(%d %d)" % (len(self.rows), col,)
@@ -76,14 +77,20 @@ class Solver:
             else:
                 return ""
 
-        #return "\n".join(" ".join([str(cell) for cell in linedata]) for linedata in self.rows)
+        # return "\n".join(" ".join([str(cell) for cell in linedata]) for linedata in self.rows)
         SIZE = self.config.SIZE
         UNIT_X, UNIT_Y = self.config.UNIT_X, self.config.UNIT_Y
         colsep = " | "
-        rowsep = "\n" + ( "-" * ((SIZE+len("[]"))*(SIZE-1) + UNIT_Y*len(colsep) ))
-        return "\n".join([" ".join(
-            [str(self.rows[row][col]) + separatorNeeded(col, UNIT_X, colsep) for col in range(SIZE)])
-            + separatorNeeded(row, UNIT_Y, rowsep) for row in range(SIZE)])
+        rowsep = "\n" + ("-" * ((SIZE+len("[]"))*(SIZE-1) + UNIT_Y*len(colsep)))
+
+        def cellsfmt(row):
+            return [str(self.rows[row][col]) + separatorNeeded(col, UNIT_X, colsep)
+                    for col in range(SIZE)]
+
+        def rowfmt(row):
+            return " ".join(cellsfmt(row)) + separatorNeeded(row, UNIT_Y, rowsep)
+
+        return "\n".join([rowfmt(row) for row in range(SIZE)])
 
     def dumpdata(self):
         print(str(self))
@@ -94,14 +101,17 @@ class Solver:
     def __setitem__(self, row, col, value):
         self.rows[row][col] = cell(value)
 
-
     def byRule1(self, i):
         "Row i"
-        if i >= len(self.rows): print("Trying to get row %d while there are only %d of them" % ( i, len(self.rows), ))
+        if i >= len(self.rows):
+            print("Trying to get row %d while there are only %d of them" %
+                  (i, len(self.rows), ))
         return [cell for cell in self.rows[i]]
+
     def byRule2(self, i):
         "Col i"
         return [row[i] for row in self.rows]
+
     def byRule3(self, i):
         "Square i"
         """
@@ -128,7 +138,8 @@ class Solver:
         row = UNIT_Y * (i // UNIT_Y)
         col = UNIT_X * (i % UNIT_Y)
         import itertools
-        return [self.rows[row+offset[0]][col+offset[1]] for offset in itertools.product(range(UNIT_Y), range(UNIT_X))]
+        return [self.rows[row+offset[0]][col+offset[1]]
+                for offset in itertools.product(range(UNIT_Y), range(UNIT_X))]
 
     def hasDuplicate(self, cellist, contextdescription=""):
         usedvalues = []
@@ -136,11 +147,13 @@ class Solver:
         # print("Checking %s in context %s" % (valuestocheck, contextdescription, ))
         for cellvalue in valuestocheck:
             if cellvalue in usedvalues:
-                if (self.director): print("Context: %s\nValues: %s\nUsed already: %s" % (contextdescription, valuestocheck, usedvalues,))
+                if (self.director):
+                    print("Context: %s\nValues: %s\nUsed already: %s" %
+                          (contextdescription, valuestocheck, usedvalues,))
                 return True
             else:
                 usedvalues.append(cellvalue)
-        return False 
+        return False
 
     def elimination(self, cellist, context):
         success = False
@@ -151,7 +164,7 @@ class Solver:
                         cell.possible = cell.possible.replace(pivotcell.value, "")
                         success = True
                         if len(cell.possible) == 0 and self.director:
-                            print("Contradiction on cell "+ cell.description)
+                            print("Contradiction on cell " + cell.description)
                         if len(cell.possible) == 1:
                             cell.value = cell.possible
             else:
@@ -161,45 +174,52 @@ class Solver:
                 for cell in cellist:
                     if (cell != pivotcell):
                         pivotpossibilities -= set(cell.possible)
-                if (len(pivotpossibilities)==1):
+                if (len(pivotpossibilities) == 1):
                     pivotcell.value = list(pivotpossibilities)[0]
                     pivotcell.possible = pivotcell.value
-                    # print("Cell %s had no rival for value %s" % (pivotcell.description, pivotcell.value, ))
+                    # print("Cell %s had no rival for value %s" %
+                    #     (pivotcell.description, pivotcell.value, ))
                     success = True
         return success
 
     def isValid(self):
         for i in range(self.config.SIZE):
-            if self.hasDuplicate(self.byRule1(i), "by row %d" % i ) \
-            or self.hasDuplicate(self.byRule2(i), "by col %d" % i ) \
-            or self.hasDuplicate(self.byRule3(i), "by sqr %d" % i ) \
-                : return False
+            rules = (
+                (self.byRule1, "by row %d", ),
+                (self.byRule2, "by col %d", ),
+                (self.byRule3, "by sqr %d", )
+                )
+
+            for rule, note in rules:
+                if self.hasDuplicate(rule(i), note % i):
+                    return False
         return True
 
-    def solve(self, iterbase = 0):
+    def solve(self, iterbase=0):
         solutionlist = []
         if not self.isValid() and self.director:
             print("Invalid starting state!")
         else:
-            if self.director: print("Seems legit...")
+            if self.director:
+                print("Seems legit...")
             keepgoing = True
             itercount = 0
             while keepgoing:
                 itercount += 1
                 keepgoing = False
                 for i in range(self.config.SIZE):
-                    keepgoing = keepgoing or self.elimination(self.byRule1(i), "by row %d"%i )
-                    keepgoing = keepgoing or self.elimination(self.byRule2(i), "by col %d"%i )
-                    keepgoing = keepgoing or self.elimination(self.byRule3(i), "by sqr %d"%i )
+                    keepgoing = keepgoing or self.elimination(self.byRule1(i), "by row %d" % i)
+                    keepgoing = keepgoing or self.elimination(self.byRule2(i), "by col %d" % i)
+                    keepgoing = keepgoing or self.elimination(self.byRule3(i), "by sqr %d" % i)
                 # print("\nAfter %d+%d iteration(s): " % (iterbase, itercount, ))
                 # self.dumpdata()
 
-            success = "?"
-            if keepgoing: success = "Failure"
-            elif not self.isValid(): success = "Invalid"
+            if keepgoing:
+                pass
+            elif not self.isValid():
+                pass
             elif self.solved():
-                success = "Success"
-                solutionlist = [self.clone(),]
+                solutionlist = [self.clone(), ]
                 print("Success after %d iterations" % (iterbase + itercount,))
             else:
                 aclone = self.clone()
