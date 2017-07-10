@@ -35,13 +35,13 @@ class Solver:
         self.textout = textout
         self.director = director
         self.textinput = textinput.split("\n")
+        self.generate = None
         self.configline = "3x3:.123456789"
-        configline = self.textinput[0]
-        config = Config()
-        if 'x' in configline and ':' in configline:
-            self.configline = configline
-            config = Config(configline)
+        firstline = self.textinput[0]
+        if 'x' in firstline and ':' in firstline:
+            self.configline = firstline
             self.textinput.pop(0)
+        config = Config(self.configline)
 
         if not config.is_valid():
             self.print("Invalid config")
