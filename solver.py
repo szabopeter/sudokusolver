@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 
 
+class StandardTextOut(object):
+    def print(self, text):
+        print(text)
+
+
 class Config(object):
     def __init__(self, configline=None):
         if configline is None:
@@ -16,8 +21,6 @@ class Config(object):
     def is_valid(self):
         self.SIZE = len(self.VALIDCHARS)
         if self.UNIT_X*self.UNIT_Y != self.SIZE:
-            print("Invalid config!")
-            print(self)
             return False
         return True
 
@@ -28,7 +31,8 @@ class Config(object):
 
 
 class Solver:
-    def __init__(self, textinput, director=True):
+    def __init__(self, textinput, director=True, textout=None):
+        self.textout = textout
         self.director = director
         self.textinput = textinput.split("\n")
         self.configline = "3x3:.123456789"
@@ -40,16 +44,22 @@ class Solver:
             self.textinput.pop(0)
 
         if not config.is_valid():
+            self.print("Invalid config")
+            self.print(config)
             raise Exception("Invalid config")
 
         self.config = config
-        # print(self.config)
+        # self.print(self.config)
 
         self.rows = []
         self.fill_rows()
-        # print(str(self))
+        # self.print(str(self))
         if (len(self.rows) != self.config.SIZE):
-            print("Invalid number of rows (%d)!" % (len(self.rows)))
+            self.print("Invalid number of rows (%d)!" % (len(self.rows)))
+
+    def print(self, text):
+        if self.textout:
+            self.textout.print(text)
 
     def fill_rows(self):
         for line in self.textinput:
@@ -71,7 +81,7 @@ class Solver:
 
                 self.rows.append(linedata)
             elif len(validchars) != 0:
-                print("Invalid row: " + line.strip())
+                self.print("Invalid row: " + line.strip())
 
     def __str__(self):
         def separatorNeeded(col, unit, separator):
@@ -96,7 +106,7 @@ class Solver:
         return "\n".join([rowfmt(row) for row in range(SIZE)])
 
     def dumpdata(self):
-        print(str(self))
+        self.print(str(self))
 
     def __getitem__(self, row, col):
         return self.rows[row][col].value
@@ -107,8 +117,8 @@ class Solver:
     def byRule1(self, i):
         "Row i"
         if i >= len(self.rows):
-            print("Trying to get row %d while there are only %d of them" %
-                  (i, len(self.rows), ))
+            self.print("Trying to get row %d while there are only %d of them" %
+                       (i, len(self.rows), ))
         return [cell for cell in self.rows[i]]
 
     def byRule2(self, i):
@@ -147,12 +157,12 @@ class Solver:
     def hasDuplicate(self, cellist, contextdescription=""):
         usedvalues = []
         valuestocheck = [cell.value for cell in cellist if cell.value in self.config.VALIDCHARS]
-        # print("Checking %s in context %s" % (valuestocheck, contextdescription, ))
+        # self.print("Checking %s in context %s" % (valuestocheck, contextdescription, ))
         for cellvalue in valuestocheck:
             if cellvalue in usedvalues:
                 if (self.director):
-                    print("Context: %s\nValues: %s\nUsed already: %s" %
-                          (contextdescription, valuestocheck, usedvalues,))
+                    self.print("Context: %s\nValues: %s\nUsed already: %s" %
+                               (contextdescription, valuestocheck, usedvalues,))
                 return True
             else:
                 usedvalues.append(cellvalue)
@@ -176,7 +186,7 @@ class Solver:
                 cell.possible = cell.possible.replace(pivotcell.value, "")
                 success = True
                 if len(cell.possible) == 0 and self.director:
-                    print("Contradiction on cell " + cell.description)
+                    self.print("Contradiction on cell " + cell.description)
                 if len(cell.possible) == 1:
                     cell.value = cell.possible
         return success
@@ -185,14 +195,14 @@ class Solver:
         success = False
         pivotpossibilities = set(pivotcell.possible)
         if (context == "dbg"):
-            print("%s: %s" % (pivotcell, pivotpossibilities,))
+            self.print("%s: %s" % (pivotcell, pivotpossibilities,))
         for cell in cellist:
             if (cell != pivotcell):
                 pivotpossibilities -= set(cell.possible)
         if (len(pivotpossibilities) == 1):
             pivotcell.value = list(pivotpossibilities)[0]
             pivotcell.possible = pivotcell.value
-            # print("Cell %s had no rival for value %s" %
+            # self.print("Cell %s had no rival for value %s" %
             #     (pivotcell.description, pivotcell.value, ))
             success = True
         return success
@@ -225,19 +235,19 @@ class Solver:
     def solve(self, iterbase=0):
         solutionlist = []
         if not self.isValid() and self.director:
-            print("Invalid starting state!")
+            self.print("Invalid starting state!")
         else:
             if self.director:
-                print("Seems legit...")
+                self.print("Seems legit...")
             itercount = self.eliminate()
 
-            # print("\nAfter %d+%d iteration(s): " % (iterbase, itercount, ))
+            # self.print("\nAfter %d+%d iteration(s): " % (iterbase, itercount, ))
             # self.dumpdata()
 
             if self.isValid():
                 if self.solved():
                     solutionlist = [self.clone(), ]
-                    print("Success after %d iterations" % (iterbase + itercount,))
+                    self.print("Success after %d iterations" % (iterbase + itercount,))
                 else:
                     subsolutions = self.trackback(iterbase, itercount)
                     solutionlist.extend(subsolutions)
@@ -249,9 +259,9 @@ class Solver:
         solutionlist = []
         badcell = self.unsolvedCellsToBacktrack()[0]
         if len(badcell.possible) > 3:
-            print(self)
-            print("Backtracking at %s with too many possible values: %s" %
-                  (badcell.description, badcell.possible, ))
+            self.print(self)
+            self.print("Backtracking at %s with too many possible values: %s" %
+                       (badcell.description, badcell.possible, ))
 
         for trial in badcell.possible:
             aclone = self.clone()
@@ -266,8 +276,8 @@ class Solver:
                 return solutionlist
 
             if subsolutions:
-                print("Had to backtrack at this state:")
-                print(self.asText())
+                self.print("Had to backtrack at this state:")
+                self.print(self.asText())
 
             solutionlist.extend(subsolutions)
         return solutionlist
@@ -275,7 +285,7 @@ class Solver:
     def allCellsFlat(self):
         SIZE = self.config.SIZE
         # rowlens = ",".join([str(len(row)) for row in self.rows])
-        # print("size=%s rows=%s rowlens=%s" % (SIZE, len(self.rows), rowlens))
+        # self.print("size=%s rows=%s rowlens=%s" % (SIZE, len(self.rows), rowlens))
         return [self.rows[i // SIZE][i % SIZE] for i in range(SIZE*SIZE)]
 
     def unsolvedCells(self):
@@ -296,7 +306,7 @@ class Solver:
         return text
 
     def clone(self):
-        return Solver(self.asText(), director=False)
+        return Solver(self.asText(), director=False, textout=self.textout)
 
 
 class cell:
@@ -335,12 +345,12 @@ if __name__ == '__main__':
     else:
         f = open(sys.argv[1])
         data = f.read()
-        s = Solver(data, director=True)
+        s = Solver(data, director=True, textout=StandardTextOut())
         # s.dumpdata()
-        #  print(repr(s.byRule3(8)))
+        #  s.print(repr(s.byRule3(8)))
         solutions = s.solve()
-        print("Found %d solution%s" % (len(solutions), "s" if len(solutions) > 1 else ""))
+        s.print("Found %d solution%s" % (len(solutions), "s" if len(solutions) > 1 else ""))
         for i in range(len(solutions)):
-            print("Solution #%d" % (i+1))
+            s.print("Solution #%d" % (i+1))
             solutions[i].dumpdata()
-            # print(solutions[i].asText())
+            # s.print(solutions[i].asText())
