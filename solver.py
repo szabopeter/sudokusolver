@@ -245,11 +245,12 @@ class Solver:
                 keepgoing = keepgoing or self.elimination(self.byRule3(i), "by sqr %d" % i)
         return itercount
 
-    def solve(self, iterbase=0, max_backtrack = None):
+    def solve(self, iterbase=0, max_backtrack=None):
         if self.generating is not None:
-            return self.generate(), False
+            return self.generate()
 
         solutionlist = []
+        limit_reached = False
         if not self.isValid() and self.director:
             self.print("Invalid starting state!")
         else:
@@ -265,11 +266,13 @@ class Solver:
                     solutionlist = [self.clone(), ]
                     self.print("Success after %d iterations" % (iterbase + itercount,))
                 else:
-                    subsolutions = self.backtrack(iterbase, itercount, max_backtrack)
+                    subsolutions, limit_hit = self.backtrack(iterbase, itercount, max_backtrack)
                     solutionlist.extend(subsolutions)
+                    if limit_hit:
+                        limit_reached = True
 
             # self.elimination(self.byRule3(8), "dbg")
-        return solutionlist
+        return solutionlist, limit_reached
 
     def generate(self):
         tried = []
@@ -285,29 +288,38 @@ class Solver:
                 unsolved_cell.value = unsolved_cell.possible = trial
                 self.eliminate()
             solutions, limit_reached = aclone.solve(max_backtrack=self.generating)
+
             tuning = self.generation_iteration_decision(solutions, limit_reached)
-            # TODO
-            if len(solutions) == 1:
+
+            if tuning == 0:
                 return solutions
-                finished = True
+                finished = True, limit_reached
                 break
 
-            if len(solutions) == 0:
-                self.print("No solutions found starting with %s filled cells, will try with less." %
-                           filled_cell_count)
+            if tuning == -1:
+                self.print(("No proper solutions found starting with %s filled cells, " +
+                           "will try with less.") % filled_cell_count)
                 filled_cell_count -= 1
 
-            if len(solutions) > 1:
+            if tuning == +1:
                 self.print("Too many (%s) solutions with %s filled cells, will try with more." %
                            (len(solutions), filled_cell_count, ))
                 filled_cell_count += 1
 
             if filled_cell_count < 0:
                 self.print("Filled cell count is too low.")
-                return []
+                return [], limit_reached
 
-    def generation_iteration_decision(self, solutions, backtracks):
-        return 1
+    def generation_iteration_decision(self, solutions, limit_reached):
+        solcount = len(solutions)
+        if solcount == 1:
+            return 0
+
+        if solcount == 0:
+            if limit_reached:
+                return +1
+            return -1
+        return +1
 
     def backtrack(self, iterbase, itercount, max_backtrack):
         if max_backtrack == 0:

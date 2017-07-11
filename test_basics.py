@@ -8,7 +8,7 @@ class BasicsTestCase(unittest.TestCase):
                             1 .
                             ---
                             . . """)
-        solutions = solver.solve()
+        solutions = solver.solve()[0]
         self.assertEqual(1, len(solutions))
 
     def test_2x1_backtracking(self):
@@ -16,7 +16,7 @@ class BasicsTestCase(unittest.TestCase):
                             . .
                             ---
                             . . """)
-        solutions = solver.solve()
+        solutions = solver.solve()[0]
         self.assertEqual(2, len(solutions))
 
     def test_3x3_trivial(self):
@@ -33,7 +33,7 @@ class BasicsTestCase(unittest.TestCase):
                         7..|.2.|.9.
                         .21|6..|3..
                         """)
-        solutions = solver.solve()
+        solutions = solver.solve()[0]
         self.assertEqual(1, len(solutions))
         solution = solutions[0]
         expected_lines = [

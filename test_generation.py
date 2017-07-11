@@ -17,8 +17,8 @@ class GenerationTestCase(unittest.TestCase):
         generator = Solver("generate 0")
         cases = (
             (["single solution", ], 0, 0, ),
-            ([], 0, -1, ), # no solution because of contradiction
-            ([], -1, +1, ), # no solution because of backtrack limit
+            ([], 0, -1, ),      # no solution because of contradiction
+            ([], -1, +1, ),     # no solution because of backtrack limit
             (["multiple", "solutions", ], 1, +1, ),
         )
         for solutions, backtracks, expected_decision in cases:
