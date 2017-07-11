@@ -35,7 +35,15 @@ class Solver:
         self.textout = textout
         self.director = director
         self.textinput = textinput.split("\n")
-        self.generate = None
+        self.generating = None
+        firstline = self.textinput[0]
+        if "generate" in firstline:
+            genargs = firstline.split()
+            if len(genargs) > 1:
+                self.generating = int(genargs[1])
+                self.print("Will generate (%s)" % self.generating)
+                self.textinput.pop(0)
+
         self.configline = "3x3:.123456789"
         firstline = self.textinput[0]
         if 'x' in firstline and ':' in firstline:
@@ -51,7 +59,8 @@ class Solver:
         self.config = config
         # self.print(self.config)
 
-        self.rows = []
+        if self.generating is not None:
+            self.textinput = self.all_empty()
         self.fill_rows()
         # self.print(str(self))
         if (len(self.rows) != self.config.SIZE):
@@ -61,7 +70,11 @@ class Solver:
         if self.textout:
             self.textout.print(text)
 
+    def all_empty(self):
+        return [self.config.EMPTYCHAR * self.config.SIZE for row_nr in range(self.config.SIZE)]
+
     def fill_rows(self):
+        self.rows = []
         for line in self.textinput:
             if line.strip().startswith("#"):
                 continue
@@ -232,7 +245,10 @@ class Solver:
                 keepgoing = keepgoing or self.elimination(self.byRule3(i), "by sqr %d" % i)
         return itercount
 
-    def solve(self, iterbase=0):
+    def solve(self, iterbase=0, max_trackback = None):
+        if self.generating is not None:
+            return self.generate()
+
         solutionlist = []
         if not self.isValid() and self.director:
             self.print("Invalid starting state!")
@@ -249,13 +265,49 @@ class Solver:
                     solutionlist = [self.clone(), ]
                     self.print("Success after %d iterations" % (iterbase + itercount,))
                 else:
-                    subsolutions = self.trackback(iterbase, itercount)
+                    subsolutions = self.trackback(iterbase, itercount, max_trackback)
                     solutionlist.extend(subsolutions)
 
             # self.elimination(self.byRule3(8), "dbg")
         return solutionlist
 
-    def trackback(self, iterbase, itercount):
+    def generate(self):
+        tried = []
+        filled_cell_count = self.config.SIZE
+        finished = False
+        while not finished and filled_cell_count not in tried:
+            tried.append(filled_cell_count)
+            original = self.clone()
+            aclone = original.clone()
+            for i in range(filled_cell_count):
+                unsolved_cell = aclone.unsolvedCells()[0]
+                trial = unsolved_cell.possible[0]
+                unsolved_cell.value = unsolved_cell.possible = trial
+                self.eliminate()
+            solutions = aclone.solve(max_trackback=self.generating)
+            if len(solutions) == 1:
+                return solutions
+                finished = True
+                break
+
+            if len(solutions) == 0:
+                self.print("No solutions found starting with %s filled cells, will try with less." %
+                           filled_cell_count)
+                filled_cell_count -= 1
+
+            if len(solutions) > 1:
+                self.print("Too many (%s) solutions with %s filled cells, will try with more." %
+                           (len(solutions), filled_cell_count, ))
+                filled_cell_count += 1
+
+    def trackback(self, iterbase, itercount, max_trackback):
+        if max_trackback == 0:
+            # self.print("Reached max trackback limit.")
+            return []
+
+        if max_trackback is not None:
+            max_trackback -= 1
+
         solutionlist = []
         badcell = self.unsolvedCellsToBacktrack()[0]
         if len(badcell.possible) > 3:
@@ -271,7 +323,7 @@ class Solver:
             badcellclone.possible = trial
 
             try:
-                subsolutions = aclone.solve(iterbase + itercount)
+                subsolutions = aclone.solve(iterbase + itercount, max_trackback)
             except KeyboardInterrupt:
                 return solutionlist
 

@@ -1,10 +1,10 @@
 import unittest
-from solver import Solver
+from solver import Solver, StandardTextOut
 
 
 class GenerationTestCase(unittest.TestCase):
-    def test_2x1_trivial(self):
-        generator = Solver("generate 0\n2x2:.12")
+    def test_2x2_without_backtracking(self):
+        generator = Solver("generate 0\n2x2:.1234", textout=StandardTextOut())
         puzzle = generator.solve()
         self.assertEqual(1, len(puzzle))
 
