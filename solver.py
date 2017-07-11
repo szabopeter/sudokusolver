@@ -36,7 +36,7 @@ class Solver:
         self.director = director
         self.textinput = textinput.split("\n")
         self.generating = None
-        firstline = self.textinput[0]
+        firstline = self.textinput[0] if self.textinput else ""
         if "generate" in firstline:
             genargs = firstline.split()
             if len(genargs) > 1:
@@ -45,7 +45,7 @@ class Solver:
                 self.textinput.pop(0)
 
         self.configline = "3x3:.123456789"
-        firstline = self.textinput[0]
+        firstline = self.textinput[0] if self.textinput else ""
         if 'x' in firstline and ':' in firstline:
             self.configline = firstline
             self.textinput.pop(0)
@@ -245,9 +245,9 @@ class Solver:
                 keepgoing = keepgoing or self.elimination(self.byRule3(i), "by sqr %d" % i)
         return itercount
 
-    def solve(self, iterbase=0, max_trackback = None):
+    def solve(self, iterbase=0, max_backtrack = None):
         if self.generating is not None:
-            return self.generate()
+            return self.generate(), False
 
         solutionlist = []
         if not self.isValid() and self.director:
@@ -265,7 +265,7 @@ class Solver:
                     solutionlist = [self.clone(), ]
                     self.print("Success after %d iterations" % (iterbase + itercount,))
                 else:
-                    subsolutions = self.trackback(iterbase, itercount, max_trackback)
+                    subsolutions = self.backtrack(iterbase, itercount, max_backtrack)
                     solutionlist.extend(subsolutions)
 
             # self.elimination(self.byRule3(8), "dbg")
@@ -284,7 +284,9 @@ class Solver:
                 trial = unsolved_cell.possible[0]
                 unsolved_cell.value = unsolved_cell.possible = trial
                 self.eliminate()
-            solutions = aclone.solve(max_trackback=self.generating)
+            solutions, limit_reached = aclone.solve(max_backtrack=self.generating)
+            tuning = self.generation_iteration_decision(solutions, limit_reached)
+            # TODO
             if len(solutions) == 1:
                 return solutions
                 finished = True
@@ -300,15 +302,23 @@ class Solver:
                            (len(solutions), filled_cell_count, ))
                 filled_cell_count += 1
 
-    def trackback(self, iterbase, itercount, max_trackback):
-        if max_trackback == 0:
-            # self.print("Reached max trackback limit.")
-            return []
+            if filled_cell_count < 0:
+                self.print("Filled cell count is too low.")
+                return []
 
-        if max_trackback is not None:
-            max_trackback -= 1
+    def generation_iteration_decision(self, solutions, backtracks):
+        return 1
+
+    def backtrack(self, iterbase, itercount, max_backtrack):
+        if max_backtrack == 0:
+            # self.print("Reached max backtrack limit.")
+            return [], True
+
+        if max_backtrack is not None:
+            max_backtrack -= 1
 
         solutionlist = []
+        limit_reached = False
         badcell = self.unsolvedCellsToBacktrack()[0]
         if len(badcell.possible) > 3:
             self.print(self)
@@ -323,16 +333,18 @@ class Solver:
             badcellclone.possible = trial
 
             try:
-                subsolutions = aclone.solve(iterbase + itercount, max_trackback)
+                subsolutions, limit_hit = aclone.solve(iterbase + itercount, max_backtrack)
+                if limit_hit:
+                    limit_reached = True
             except KeyboardInterrupt:
-                return solutionlist
+                return solutionlist, limit_reached
 
             if subsolutions:
                 self.print("Had to backtrack at this state:")
                 self.print(self.asText())
 
             solutionlist.extend(subsolutions)
-        return solutionlist
+        return solutionlist, limit_reached
 
     def allCellsFlat(self):
         SIZE = self.config.SIZE
@@ -400,7 +412,7 @@ if __name__ == '__main__':
         s = Solver(data, director=True, textout=StandardTextOut())
         # s.dumpdata()
         #  s.print(repr(s.byRule3(8)))
-        solutions = s.solve()
+        solutions, limit_reached = s.solve()
         s.print("Found %d solution%s" % (len(solutions), "s" if len(solutions) > 1 else ""))
         for i in range(len(solutions)):
             s.print("Solution #%d" % (i+1))
