@@ -34,6 +34,7 @@ class Solver:
     def __init__(self, textinput, director=True, textout=None):
         self.textout = textout
         self.director = director
+        self.backtrack_count = -1
         self.textinput = textinput.split("\n")
         self.generating = None
         firstline = self.textinput[0] if self.textinput else ""
@@ -213,8 +214,8 @@ class Solver:
             if (cell != pivotcell):
                 pivotpossibilities -= set(cell.possible)
         if (len(pivotpossibilities) == 1):
-            pivotcell.value = list(pivotpossibilities)[0]
-            pivotcell.possible = pivotcell.value
+            value = pivotpossibilities.pop()
+            pivotcell.set_final(value)
             # self.print("Cell %s had no rival for value %s" %
             #     (pivotcell.description, pivotcell.value, ))
             success = True
@@ -249,6 +250,8 @@ class Solver:
         if self.generating is not None:
             return self.generate()
 
+        self.backtrack_count += 1
+
         solutionlist = []
         limit_reached = False
         if not self.isValid() and self.director:
@@ -275,40 +278,44 @@ class Solver:
         return solutionlist, limit_reached
 
     def generate(self):
-        tried = []
         filled_cell_count = self.config.SIZE
         finished = False
-        while not finished and filled_cell_count not in tried:
-            tried.append(filled_cell_count)
-            original = self.clone()
-            aclone = original.clone()
+        attempts_left = 12
+        while not finished and attempts_left > 0:
+            attempts_left -= 1
+            work = self.clone()
+            puzzle = self.clone()
             for i in range(filled_cell_count):
-                unsolved_cell = aclone.unsolvedCells()[0]
+                unsolved_cell = work.unsolvedCells()[0]
                 trial = unsolved_cell.possible[0]
-                unsolved_cell.value = unsolved_cell.possible = trial
-                self.eliminate()
-            solutions, limit_reached = aclone.solve(max_backtrack=self.generating)
-
+                unsolved_cell.set_final(trial)
+                puzzle_cell = puzzle.get_cell(unsolved_cell.description)
+                puzzle_cell.set_final(trial)
+                work.eliminate()
+            self.print("Checking generated puzzle")
+            self.print(puzzle)
+            original = puzzle.clone()
+            work = puzzle.clone()
+            solutions, limit_reached = work.solve(max_backtrack=self.generating)
             tuning = self.generation_iteration_decision(solutions, limit_reached)
+            original.print(original)
+            self.print("Tried filling %s cells, got %s solutions, limit hit: %s => %s" %
+                       (filled_cell_count, len(solutions), limit_reached, tuning))
 
             if tuning == 0:
-                return solutions
+                self.print("Ending generation.")
+                self.print(original)
+                return [original], limit_reached
                 finished = True, limit_reached
                 break
 
-            if tuning == -1:
-                self.print(("No proper solutions found starting with %s filled cells, " +
-                           "will try with less.") % filled_cell_count)
-                filled_cell_count -= 1
-
-            if tuning == +1:
-                self.print("Too many (%s) solutions with %s filled cells, will try with more." %
-                           (len(solutions), filled_cell_count, ))
-                filled_cell_count += 1
+            filled_cell_count += tuning
 
             if filled_cell_count < 0:
                 self.print("Filled cell count is too low.")
                 return [], limit_reached
+
+        return [], False
 
     def generation_iteration_decision(self, solutions, limit_reached):
         solcount = len(solutions)
@@ -339,10 +346,8 @@ class Solver:
 
         for trial in badcell.possible:
             aclone = self.clone()
-            badcellclone = [cell for cell in aclone.allCellsFlat()
-                            if badcell.description == cell.description][0]
-            badcellclone.value = trial
-            badcellclone.possible = trial
+            badcellclone = aclone.get_cell(badcell.description)
+            badcellclone.set_final(trial)
 
             try:
                 subsolutions, limit_hit = aclone.solve(iterbase + itercount, max_backtrack)
@@ -357,6 +362,13 @@ class Solver:
 
             solutionlist.extend(subsolutions)
         return solutionlist, limit_reached
+
+    def get_cell(self, description):
+        for row in self.rows:
+            for cell in row:
+                if cell.description == description:
+                    return cell
+        return None
 
     def allCellsFlat(self):
         SIZE = self.config.SIZE
@@ -382,7 +394,9 @@ class Solver:
         return text
 
     def clone(self):
-        return Solver(self.asText(), director=False, textout=self.textout)
+        clone = Solver(self.asText(), director=False, textout=self.textout)
+        clone.backtrack_count = self.backtrack_count
+        return clone
 
 
 class cell:
@@ -413,6 +427,9 @@ class cell:
     def clone(self):
         return cell(self.value, self.description, self.possible, self.config)
 
+    def set_final(self, value):
+        self.value = self.possible = value
+
 
 if __name__ == '__main__':
     import sys
@@ -428,5 +445,7 @@ if __name__ == '__main__':
         s.print("Found %d solution%s" % (len(solutions), "s" if len(solutions) > 1 else ""))
         for i in range(len(solutions)):
             s.print("Solution #%d" % (i+1))
-            solutions[i].dumpdata()
-            # s.print(solutions[i].asText())
+            if s.generating is None:
+                solutions[i].dumpdata()
+            else:
+                s.print(solutions[i].asText())

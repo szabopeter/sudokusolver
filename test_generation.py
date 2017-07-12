@@ -3,18 +3,27 @@ from solver import Solver, StandardTextOut
 
 
 class GenerationTestCase(unittest.TestCase):
+    def create_generator(self, limit, configline, verbose=False):
+        textout = None
+        if verbose:
+            textout = StandardTextOut()
+        genline = "generate %s" % limit
+        return Solver(genline + "\n" + configline, textout=textout)
+
     def test_2x2_without_backtracking(self):
-        generator = Solver("generate 0\n2x2:.1234", textout=StandardTextOut())
-        puzzle = generator.solve()
-        self.assertEqual(1, len(puzzle))
+        generator = self.create_generator(0, "2x2:.1234")
+        puzzles, limit_reached = generator.solve()
+        self.assertEqual(1, len(puzzles))
+        puzzle = puzzles[0]
+        puzzle.print(puzzle)
 
         solver = Solver(puzzle.asText())
-        solutions = solver.solve()
+        solutions, limit_reached = solver.solve()
         self.assertEqual(1, len(solutions))
         self.assertEqual(0, solutions[0].backtrack_count)
 
     def test_generation_decisions(self):
-        generator = Solver("generate 0")
+        generator = self.create_generator(0, "\n", False)
         cases = (
             (["single solution", ], 0, 0, ),
             ([], 0, -1, ),      # no solution because of contradiction
