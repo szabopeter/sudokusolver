@@ -267,7 +267,7 @@ class Solver:
             if self.isValid():
                 if self.solved():
                     solutionlist = [self.clone(), ]
-                    self.print("Success after %d iterations" % (iterbase + itercount,))
+                    # self.print("Success after %d iterations" % (iterbase + itercount,))
                 else:
                     subsolutions, limit_hit = self.backtrack(iterbase, itercount, max_backtrack)
                     solutionlist.extend(subsolutions)
@@ -369,9 +369,9 @@ class Solver:
             except KeyboardInterrupt:
                 return solutionlist, limit_reached
 
-            if subsolutions:
-                self.print("Had to backtrack at this state:")
-                self.print(self.asText())
+            # if subsolutions:
+            #    self.print("Had to backtrack at this state:")
+            #    self.print(self.asText())
 
             solutionlist.extend(subsolutions)
         return solutionlist, limit_reached
@@ -400,11 +400,17 @@ class Solver:
     def solved(self):
         return self.isValid() and len(self.unsolvedCells()) == 0
 
+    def asLines(self):
+        boardlines = ["".join([cell.value for cell in row]) for row in self.rows]
+        return boardlines
+
     def asText(self):
         configline = [self.configline, ]
-        boardlines = ["".join([cell.value for cell in row]) for row in self.rows]
-        text = "\n".join(configline + boardlines)
+        text = "\n".join(configline + self.asLines())
         return text
+
+    def signature(self):
+        return " ".join(self.asLines())
 
     def clone(self):
         clone = Solver(self.asText(), director=False, textout=self.textout)
@@ -456,9 +462,15 @@ if __name__ == '__main__':
         #  s.print(repr(s.byRule3(8)))
         solutions, limit_reached = s.solve()
         s.print("Found %d solution%s" % (len(solutions), "s" if len(solutions) > 1 else ""))
+        verbose = len(solutions) < 7
         for i in range(len(solutions)):
-            s.print("Solution #%d" % (i+1))
-            if s.generating is None:
-                solutions[i].dumpdata()
-            else:
+            if verbose:
+                s.print("Solution #%d" % (i+1))
+
+            if s.generating is not None:
                 s.print(solutions[i].asText())
+            else:
+                if verbose:
+                    solutions[i].dumpdata()
+                else:
+                    s.print(solutions[i].signature())
