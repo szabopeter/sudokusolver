@@ -280,14 +280,23 @@ class Solver:
     def generate(self):
         filled_cell_count = self.config.SIZE
         finished = False
-        attempts_left = 12
+        attempts_left = 48
         while not finished and attempts_left > 0:
             attempts_left -= 1
             work = self.clone()
             puzzle = self.clone()
             for i in range(filled_cell_count):
-                unsolved_cell = work.unsolvedCells()[0]
-                trial = unsolved_cell.possible[0]
+                import random
+                unsolved_cells = work.unsolvedCells()
+                if not unsolved_cells:
+                    self.print("Oh. There are no unsolved cells left...")
+                    break
+                cellindex = 0
+                if len(unsolved_cells) > 1:
+                    cellindex = random.randint(0, len(unsolved_cells)-1)
+                unsolved_cell = unsolved_cells[0]
+                valindex = random.randint(0, len(unsolved_cell.possible)-1)
+                trial = unsolved_cell.possible[valindex]
                 unsolved_cell.set_final(trial)
                 puzzle_cell = puzzle.get_cell(unsolved_cell.description)
                 puzzle_cell.set_final(trial)
@@ -299,8 +308,9 @@ class Solver:
             solutions, limit_reached = work.solve(max_backtrack=self.generating)
             tuning = self.generation_iteration_decision(solutions, limit_reached)
             original.print(original)
-            self.print("Tried filling %s cells, got %s solutions, limit hit: %s => %s" %
-                       (filled_cell_count, len(solutions), limit_reached, tuning))
+            btcounts = ", ".join([str(s.backtrack_count) for s in solutions])
+            self.print("Tried filling %s cells, got solutions: %s, limit hit: %s => %s" %
+                       (filled_cell_count, btcounts, limit_reached, tuning))
 
             if tuning == 0:
                 self.print("Ending generation.")
@@ -315,12 +325,15 @@ class Solver:
                 self.print("Filled cell count is too low.")
                 return [], limit_reached
 
+        self.print("Giving up.")
         return [], False
 
     def generation_iteration_decision(self, solutions, limit_reached):
         solcount = len(solutions)
         if solcount == 1:
-            return 0
+            if solutions[0].backtrack_count == self.generating:
+                return 0
+            return -1
 
         if solcount == 0:
             if limit_reached:
